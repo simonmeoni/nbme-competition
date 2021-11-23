@@ -1,3 +1,4 @@
+import os
 from typing import List, Optional
 
 import hydra
@@ -13,6 +14,7 @@ from pytorch_lightning.loggers import LightningLoggerBase
 
 from src.utils import utils
 
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
 log = utils.get_logger(__name__)
 
 
@@ -37,7 +39,7 @@ def train(config: DictConfig) -> Optional[float]:
 
     # Init lightning model
     log.info(f"Instantiating model <{config.model._target_}>")
-    model: LightningModule = hydra.utils.instantiate(config.model)
+    model: LightningModule = hydra.utils.instantiate(config.model, _recursive_=False)
 
     # Init lightning callbacks
     callbacks: List[Callback] = []
@@ -83,6 +85,11 @@ def train(config: DictConfig) -> Optional[float]:
     if config.get("test_after_training") and not config.trainer.get("fast_dev_run"):
         log.info("Starting testing!")
         trainer.test(model=model, datamodule=datamodule, ckpt_path="best")
+
+    # Test the model
+    if config.get("test_after_training") and config.trainer.get("fast_dev_run"):
+        log.info("Starting testing!")
+        trainer.test(model=model, datamodule=datamodule)
 
     # Make sure everything closed properly
     log.info("Finalizing!")

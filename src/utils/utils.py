@@ -5,8 +5,10 @@ from typing import List, Sequence
 import pytorch_lightning as pl
 import rich.syntax
 import rich.tree
+import torch
 from omegaconf import DictConfig, OmegaConf
 from pytorch_lightning.utilities import rank_zero_only
+from torchmetrics import Metric
 
 
 def get_logger(name=__name__) -> logging.Logger:
@@ -61,7 +63,9 @@ def extras(config: DictConfig) -> None:
     # force debugger friendly configuration if <config.trainer.fast_dev_run=True>
     # debuggers don't like GPUs and multiprocessing
     if config.trainer.get("fast_dev_run"):
-        log.info("Forcing debugger friendly configuration! <config.trainer.fast_dev_run=True>")
+        log.info(
+            "Forcing debugger friendly configuration! <config.trainer.fast_dev_run=True>"
+        )
         if config.trainer.get("gpus"):
             config.trainer.gpus = 0
         if config.datamodule.get("pin_memory"):

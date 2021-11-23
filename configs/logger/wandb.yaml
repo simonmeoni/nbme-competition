@@ -2,7 +2,7 @@
 
 wandb:
   _target_: pytorch_lightning.loggers.wandb.WandbLogger
-  project: "template-tests"
+  project: "nbme-competition"
   name: ${name}
   save_dir: "."
   offline: False # set True to store all logs only locally
@@ -11,5 +11,5 @@ wandb:
   log_model: False
   prefix: ""
   job_type: "train"
-  group: ""
+  group: ${experiment_name}@${model.model.model}
   tags: []

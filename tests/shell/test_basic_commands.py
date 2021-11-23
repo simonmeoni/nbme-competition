@@ -8,13 +8,21 @@ A couple of sanity checks to make sure the model doesn't crash with different ru
 
 def test_fast_dev_run():
     """Test running for 1 train, val and test batch."""
-    command = ["run.py", "++trainer.fast_dev_run=true"]
+    command = ["run.py", "++trainer.fast_dev_run=true", "datamodule.batch_size=4"]
     run_command(command)
 
 
 def test_cpu():
     """Test running 1 epoch on CPU."""
-    command = ["run.py", "++trainer.max_epochs=1", "++trainer.gpus=0"]
+    command = [
+        "run.py",
+        "++trainer.max_epochs=1",
+        "++trainer.gpus=0",
+        "++trainer.limit_train_batches=0.02",
+        "++trainer.limit_val_batches=0.02",
+        "++trainer.limit_test_batches=0.02",
+        "datamodule.batch_size=4",
+    ]
     run_command(command)
 
 
@@ -42,6 +50,7 @@ def test_mixed_precision():
     run_command(command)
 
 
+@RunIf(min_gpus=1)
 def test_limit_batches():
     """Test running 1 epoch on 25% of data."""
     command = [
@@ -60,5 +69,8 @@ def test_double_validation_loop():
         "run.py",
         "++trainer.max_epochs=1",
         "++trainer.val_check_interval=0.5",
+        "++trainer.limit_train_batches=0.02",
+        "++trainer.limit_val_batches=0.02",
+        "++trainer.limit_test_batches=0.02",
     ]
     run_command(command)

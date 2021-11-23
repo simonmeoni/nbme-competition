@@ -44,7 +44,9 @@ class WatchModel(Callback):
     @rank_zero_only
     def on_train_start(self, trainer, pl_module):
         logger = get_wandb_logger(trainer=trainer)
-        logger.watch(model=trainer.model, log=self.log, log_freq=self.log_freq, log_graph=True)
+        logger.watch(
+            model=trainer.model, log=self.log, log_freq=self.log_freq, log_graph=True
+        )
 
 
 class UploadCodeAsArtifact(Callback):
@@ -69,9 +71,11 @@ class UploadCodeAsArtifact(Callback):
         code = wandb.Artifact("project-source", type="code")
 
         if self.use_git:
-            # get .git folder path
+            # get .git losses path
             git_dir_path = Path(
-                subprocess.check_output(["git", "rev-parse", "--git-dir"]).strip().decode("utf8")
+                subprocess.check_output(["git", "rev-parse", "--git-dir"])
+                .strip()
+                .decode("utf8")
             ).resolve()
 
             for path in Path(self.code_dir).resolve().rglob("*"):
@@ -81,7 +85,7 @@ class UploadCodeAsArtifact(Callback):
                 command = ["git", "check-ignore", "-q", str(path)]
                 not_ignored = subprocess.run(command).returncode == 1
 
-                # don't upload files from .git folder
+                # don't upload files from .git losses
                 not_git = not str(path).startswith(str(git_dir_path))
 
                 if path.is_file() and not_git and not_ignored:
@@ -167,7 +171,9 @@ class LogConfusionMatrix(Callback):
             sn.heatmap(confusion_matrix, annot=True, annot_kws={"size": 8}, fmt="g")
 
             # names should be uniqe or else charts from different experiments in wandb will overlap
-            experiment.log({f"confusion_matrix/{experiment.name}": wandb.Image(plt)}, commit=False)
+            experiment.log(
+                {f"confusion_matrix/{experiment.name}": wandb.Image(plt)}, commit=False
+            )
 
             # according to wandb docs this should also work but it crashes
             # experiment.log(f{"confusion_matrix/{experiment.name}": plt})
@@ -233,7 +239,9 @@ class LogF1PrecRecHeatmap(Callback):
             )
 
             # names should be uniqe or else charts from different experiments in wandb will overlap
-            experiment.log({f"f1_p_r_heatmap/{experiment.name}": wandb.Image(plt)}, commit=False)
+            experiment.log(
+                {f"f1_p_r_heatmap/{experiment.name}": wandb.Image(plt)}, commit=False
+            )
 
             # reset plot
             plt.clf()
