@@ -20,12 +20,6 @@ class NBMEDataset(Dataset):
                 for offset in loc.split(";")
             ]
         )
-        if "disease_loc" in df.keys():
-            self.diseases_loc = df.diseases_loc.apply(lambda x: eval(x))
-            self.chemicals_loc = df.chemicals_loc.apply(lambda x: eval(x))
-        else:
-            self.diseases_loc = self.location
-            self.chemicals_loc = self.location
         self.tokenizer_config = tokenizer_config
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
         self.feature_text = df.feature_text.values
@@ -39,8 +33,6 @@ class NBMEDataset(Dataset):
             "feature_text": self.feature_text[index],
             "pn_history": self.pn_history[index],
             "location": self.location[index],
-            "chemicals_loc": self.chemicals_loc[index],
-            "diseases_loc": self.diseases_loc[index],
         }
 
     @staticmethod
@@ -64,27 +56,38 @@ class NBMEDataset(Dataset):
         text = [[example["pn_history"], example["feature_text"]] for example in batch]
         tokens = self.tokenizer(text, **self.tokenizer_config)
         locations = [example["location"] for example in batch]
-        diseases_loc = [example["diseases_loc"] for example in batch]
-        chemicals_loc = [example["chemicals_loc"] for example in batch]
-        diseases_labels = []
-        chemicals_labels = []
         labels = []
-        for offsets_mapping, location, disease_loc, chemical_loc in zip(
+        for offsets_mapping, location in zip(
             tokens["offset_mapping"],
             locations,
-            diseases_loc,
-            chemicals_loc,
         ):
             labels.append(self.create_labels(location, offsets_mapping))
-            chemicals_labels.append(self.create_labels(disease_loc, offsets_mapping))
-            diseases_labels.append(self.create_labels(chemical_loc, offsets_mapping))
         del tokens["offset_mapping"]
         return (
             tokens,
             torch.stack(labels).unsqueeze(2),
-            torch.stack(diseases_labels).unsqueeze(2),
-            torch.stack(chemicals_labels).unsqueeze(2),
         )
+
+
+class PseudoNBMEDataset(NBMEDataset):
+    def __init__(self, df, tokenizer, tokenizer_config):
+        self.df = df
+        self.location = df.location.apply(
+            lambda x: [
+                [int(numeric) for numeric in loc.split(" ")] for loc in x.split(";")
+            ]
+        )
+        df.annotation = df.apply(
+            lambda row: [
+                row.pn_history[offset[0] : offset[1]]
+                for offset in self.location[row.name]
+            ],
+            axis=1,
+        )
+        self.tokenizer_config = tokenizer_config
+        self.tokenizer = AutoTokenizer.from_pretrained(tokenizer)
+        self.feature_text = df.feature_text.values
+        self.pn_history = df.pn_history.values
 
 
 class DataModule(LightningDataModule):
@@ -108,6 +111,7 @@ class DataModule(LightningDataModule):
     def __init__(
         self,
         data_dir: str = "",
+        pl_data_dir: str = "",
         batch_size: int = 32,
         num_workers: int = 0,
         pin_memory: bool = False,
@@ -115,6 +119,7 @@ class DataModule(LightningDataModule):
         k_fold: int = 5,
         current_fold: int = 0,
         tokenizer: str = "",
+        pl_mode=False,
     ):
         super().__init__()
 
@@ -150,7 +155,15 @@ class DataModule(LightningDataModule):
         data_train_ids, data_val_ids = list(
             k_fold.split(self.full_dataset),
         )[self.hparams.current_fold]
-        self.data_train = Subset(self.full_dataset, data_train_ids)
+        if not self.hparams.pl_mode:
+            self.data_train = Subset(self.full_dataset, data_train_ids)
+        else:
+            pl_dataset = PseudoNBMEDataset(
+                pd.read_csv(self.hparams.pl_data_dir).dropna(),
+                self.hparams.tokenizer,
+                tokenizer_config=self.tokenizer_config,
+            )
+            self.data_train = pl_dataset
         self.data_val = Subset(self.full_dataset, data_val_ids)
 
     def train_dataloader(self):
