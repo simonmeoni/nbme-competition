@@ -3,8 +3,10 @@ _target_: src.datamodules.datamodule.DataModule
 num_workers: 0
 pin_memory: False
 data_dir: ${data_dir}/nbme-merge-dataset/train.csv
+pl_data_dir: ${data_dir}/pl-train-nbme-dataset/pl_train.csv
 batch_size: 32
 k_fold: 5
 tokenizer: ${model.model.model}
 max_length: 512
 current_fold: ${current_fold}
+pl_mode: False

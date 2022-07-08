@@ -30,7 +30,6 @@ class Model(LightningModule):
         loss=None,
         watcher=None,
     ):
-        # TODO test IF ALL THE MODIFICATIONS WORK
         super().__init__()
 
         # this line allows to access init params with 'self.hparams' attribute
@@ -49,31 +48,20 @@ class Model(LightningModule):
         self.criterion = hydra.utils.instantiate(self.hparams.loss)
 
     def step(self, batch: Any):
-        x, labels, diseases_labels, chemicals_labels = batch
+        x, labels = batch
         y_hat = self.model(x, self.device)
-        return y_hat, labels, diseases_labels, chemicals_labels
+        return y_hat, labels
 
-    def fn_loss(self, y_hat, labels, diseases_labels, chemicals_labels):
-        if y_hat.shape[-1] == 1:
-            return self.criterion(y_hat.view(-1, 1), labels.view(-1, 1))
-        elif y_hat.shape[-1] == 2:
-            return self.criterion(
-                y_hat.view(-1, 2),
-                torch.cat([labels, diseases_labels], dim=2).view(-1, 2),
-            )
-        else:
-            return self.criterion(
-                y_hat.view(-1, 3),
-                torch.cat([labels, diseases_labels, chemicals_labels], dim=2).view(-1, 3),
-            )
+    def fn_loss(self, y_hat, labels):
+        return self.criterion(y_hat.view(-1, 1), labels.view(-1, 1))
 
     @staticmethod
     def fit_for_metrics(y_hat, labels):
         return torch.nn.functional.sigmoid(y_hat), labels.long()
 
     def training_step(self, batch: Any, batch_idx: int):
-        y_hat, labels, diseases_labels, chemicals_labels = self.step(batch)
-        loss = self.fn_loss(y_hat, labels, diseases_labels, chemicals_labels)
+        y_hat, labels = self.step(batch)
+        loss = self.fn_loss(y_hat, labels)
         # log train metrics
         self.train_f1(*self.fit_for_metrics(y_hat[:, :, 0], labels))
         self.log("train/loss", loss, on_step=True, on_epoch=True, prog_bar=False)
@@ -88,7 +76,7 @@ class Model(LightningModule):
         pass
 
     def validation_step(self, batch: Any, batch_idx: int):
-        y_hat, labels, _, _ = self.step(batch)
+        y_hat, labels = self.step(batch)
         # log train metrics
         y_logits = y_hat[:, :, 0]
         self.val_f1(*self.fit_for_metrics(y_logits, labels))
