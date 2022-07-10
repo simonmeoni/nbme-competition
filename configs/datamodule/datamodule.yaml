@@ -9,4 +9,4 @@ k_fold: 5
 tokenizer: ${model.model.model}
 max_length: 512
 current_fold: ${current_fold}
-pl_mode: False
+pl_mode: 0
