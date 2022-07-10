@@ -155,15 +155,19 @@ class DataModule(LightningDataModule):
         data_train_ids, data_val_ids = list(
             k_fold.split(self.full_dataset),
         )[self.hparams.current_fold]
-        if not self.hparams.pl_mode:
-            self.data_train = Subset(self.full_dataset, data_train_ids)
-        else:
-            pl_dataset = PseudoNBMEDataset(
-                pd.read_csv(self.hparams.pl_data_dir).dropna(),
-                self.hparams.tokenizer,
-                tokenizer_config=self.tokenizer_config,
+        self.data_train = Subset(self.full_dataset, data_train_ids)
+        if self.hparams.pl_mode != 0:
+            dataframe = pd.read_csv(self.hparams.pl_data_dir).dropna()
+            self.data_train = torch.utils.data.ConcatDataset(
+                [
+                    PseudoNBMEDataset(
+                        dataframe[:int((len(dataframe) * self.hparams.pl_mode))],
+                        self.hparams.tokenizer,
+                        tokenizer_config=self.tokenizer_config,
+                    ),
+                    self.data_train,
+                ]
             )
-            self.data_train = pl_dataset
         self.data_val = Subset(self.full_dataset, data_val_ids)
 
     def train_dataloader(self):
