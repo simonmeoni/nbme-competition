@@ -1,5 +1,6 @@
-import wandb
 import os
+
+import wandb
 
 
 def download(group, project, checkpoints_path):

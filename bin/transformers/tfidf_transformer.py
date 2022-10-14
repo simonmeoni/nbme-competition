@@ -1,7 +1,7 @@
+import pandas as pd
 import torch
 from sklearn.feature_extraction.text import TfidfVectorizer
 from torch import nn
-import pandas as pd
 from transformers import AutoTokenizer
 
 from bin.transformers.hugginface_rm_dropout import rm_dropout

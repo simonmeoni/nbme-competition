@@ -1,0 +1,19 @@
+_target_: src.models.model.Model
+
+model:
+  _target_: src.models.architectures.gru.GRU
+  model: distilroberta-base
+optimizer:
+  _target_: transformers.AdamW
+  lr: 5e-5
+  weight_decay: 1e-6
+  eps: 1e-8
+scheduler:
+  _target_: torch.optim.lr_scheduler.ReduceLROnPlateau
+  patience: 1
+watcher:
+  monitor: "val/f1"
+  interval: "epoch"
+  frequency: 1
+loss:
+  _target_: torch.nn.BCEWithLogitsLoss

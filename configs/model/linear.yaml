@@ -16,4 +16,4 @@ watcher:
   interval: "epoch"
   frequency: 1
 loss:
-  _target_: src.utils.dice_loss.BCEDiceLoss
+  _target_: torch.nn.BCEWithLogitsLoss
